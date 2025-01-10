@@ -3,7 +3,7 @@
 ### Purpose
 This example demonstrates how to use the Change Stream to interact with documents as they are inserted or updated.
 
-Deletes are not currently supported and instead a soft delete flag should be implemented.
+Deletes are not currently supported and instead a soft delete flag should be implemented. Intermediate updates are not supported, as you only see the current state of the document. 
 
 Two common use cases include zero downtime data migration and change events.
 
@@ -29,24 +29,24 @@ https://learn.microsoft.com/en-us/azure/cosmos-db/mongodb/change-streams?tabs=cs
 
 
 ### Secure storage of connection string
-To securely store your Cosmos DB for Mongo connection string, we use `dotnet user-secrets`
+To securely store your Cosmos DB for Mongo connection string, we use:
 
-Initialize the secrets store
+`dotnet user-secrets`
+
+Initialize the secrets store:
 
 `dotnet user-secrets init`
 
-Add the secret
+Add the secret:
 
 `dotnet user-secrets set "COSMOS_CONNECTION_STRING" "<connection string>"`
 
 ### Rotating the resume token
-The resume token may not exist on first run. This application will start the change stream from today minus 100 days. This value can be edited to fit your use case.
+The resume token will not exist on first run. This application will start the change stream from today minus 100 days. This value can be edited to fit your use case. Every time a document is read from the Change Stream, a new resume token is produced. The new resume token is saved to a collection for storage and the old token is deleted. This allows for easily resuming the change stream where your application left off should the application stop.
 
-Every time a document is read from the Change Stream, a new resume token is produced. The new resume token is saved to a collection for storage and the old token is deleted. This allows for easily resuming the change stream where your application left off should the application stop.
+In this example, deleteOne() is used to delete the old resume token. However, it is more efficient to use TTL to delete the documents.
 
-In this example, deleteOne() is used to delete the old resume token. However, it is more efficient to user TTL to delete the documents.
-
-To implement this, you must configure a TTL index on the changeStreamToken collection. Set the expire time to -1 to not expire documents by default. Then, set the ttl property on documents to the designated value (60 seconds for instance).
+To implement TTL deletion, you must configure a TTL index on the changeStreamToken collection. Set the expire time to -1 to not expire documents by default. Then, set the ttl property on documents to the designated value (60 seconds for instance).
 
 A host builder should also be used to help the application exit gracefully allowing resume tokens to be written before exiting. If the application fails unexpectedly, there may be a duplicate document error thrown which you could ignore. This may also create orphaned resume tokens.
 
